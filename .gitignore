@@ -1,0 +1,29 @@
+# Compiled object files
+*.o
+*.obj
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+
+# Compiled static libraries
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+
+# Build directories
+build/
+bin/
+
+# IDE-specific files and directories
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.xcodeproj
+
+# Dependency directories
+vendor/
