@@ -1,6 +1,7 @@
 #ifndef NOARR_TOKENIZER_HPP
 #define NOARR_TOKENIZER_HPP
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -11,76 +12,90 @@
 namespace noarr {
 
 template<class NoarrClass>
-class tokenizer;
+class tokenizer_t;
 
 template<class NoarrClass>
-tokenizer(NoarrClass&&) -> tokenizer<std::remove_cvref_t<NoarrClass>>;
-
+tokenizer_t(NoarrClass &&) -> tokenizer_t<std::remove_cvref_t<NoarrClass>>;
 
 template<class NoarrClass>
-constexpr auto make_tokenizer(NoarrClass&& noarr_class) {
-    return tokenizer(std::forward<NoarrClass>(noarr_class));
+constexpr auto tokenizer(NoarrClass &&noarr_class) {
+    return tokenizer_t(std::forward<NoarrClass>(noarr_class));
 }
 
 template<class F>
-class generic_token_factory : public F {
+class generic_token_factory_t : public F {
 public:
     using F::operator();
     template<class T>
-    constexpr auto make_token(T&& value) const {
+    constexpr auto make_token(T &&value) const {
         return (*this)(std::forward<T>(value));
     }
 };
 
 template<class T>
-constexpr auto make_token_factory(T &&t) {
-    return generic_token_factory<T>(std::forward<T>(t));
+constexpr auto generic_token_factory(T &&t) {
+    return generic_token_factory_t<T>(std::forward<T>(t));
 }
 
 template<class ...Tokens>
-using token_list = flexible_contain<Tokens...>;
+using token_list_t = flexible_contain<Tokens...>;
+
+template<class ...Tokens>
+constexpr auto token_list(Tokens &&...tokens) {
+    return token_list_t<std::remove_cvref_t<Tokens>...>(std::forward<Tokens>(tokens)...);
+}
+
+template<class ...Tokens1, class ...Tokens2>
+constexpr auto operator+(const token_list_t<Tokens1...> &lhs, const token_list_t<Tokens2...> &rhs) {
+    return contain_cat(lhs, rhs);
+}
+
+template<class Printer, std::size_t ...Is>
+constexpr auto print_tokens(Printer &&printer, const auto &tokens, [[maybe_unused]] std::index_sequence<Is...> is) {
+    return (void(0), ... , std::forward<Printer>(printer)(tokens.template get<Is>()));
+}
 
 template<class Printer, class ...Tokens>
-constexpr auto print_tokens(Printer&& printer, const token_list<Tokens...>& tokens) {
-    []<std::size_t ...Is>(auto&& tokens, Printer&& printer, std::index_sequence<Is...>){ return (void(9), ... , std::forward<Printer>(printer)(tokens.template get<Is>())); }(tokens, std::forward<Printer>(printer), std::index_sequence_for<Tokens...>());
+constexpr auto print_tokens(Printer &&printer, const token_list_t<Tokens...> &tokens) {
+    print_tokens(std::forward<Printer>(printer), tokens, std::index_sequence_for<Tokens...>());
 }
 
 template<IsStruct Structure>
-class tokenizer<Structure> : flexible_contain<Structure> {
+class tokenizer_t<Structure> : flexible_contain<Structure> {
 public:
     using flexible_contain<Structure>::flexible_contain;
-    template<class TokenFactory>
-    constexpr auto tokenize(TokenFactory&& tf) const {
-        return contain_cat(make_tokenizer(this->get().sub_structure()).tokenize(std::forward<TokenFactory>(tf)), std::forward<TokenFactory>(tf).make_token(this->get()), make_tokenizer(typename std::remove_cvref_t<decltype(this->get())>::params()).tokenize(std::forward<TokenFactory>(tf)));
+    constexpr auto tokenize(auto &&tf) const {
+        return tokenizer(this->get().sub_structure()).tokenize(tf) + tf.make_token(this->get());
+        // tokenizer(typename std::remove_cvref_t<decltype(this->get())>::params()).tokenize(tf)
     }
 };
 
 template<class T>
-class tokenizer<scalar<T>> : flexible_contain<scalar<T>> {
+class tokenizer_t<scalar<T>> : flexible_contain<scalar<T>> {
 public:
     using flexible_contain<scalar<T>>::flexible_contain;
     template<class TokenFactory>
-    constexpr auto tokenize(TokenFactory&& tf) const {
-        return contain_cat(std::forward<TokenFactory>(tf).make_token(this->get()));
+    constexpr auto tokenize(TokenFactory &&tf) const {
+        return std::forward<TokenFactory>(tf).make_token(this->get());
     }
 };
 
 template<class ...Params>
-class tokenizer<struct_params<Params...>> : flexible_contain<struct_params<Params...>> {
+class tokenizer_t<struct_params<Params...>> : flexible_contain<struct_params<Params...>> {
 public:
     using flexible_contain<struct_params<Params...>>::flexible_contain;
     template<class TokenFactory>
-    constexpr auto tokenize(TokenFactory&& tf) const {
-        return tokenize(std::forward<TokenFactory>(tf), std::make_index_sequence<sizeof...(Params)>());
+    constexpr auto tokenize(TokenFactory &&tf) const {
+        return tokenize(std::forward<TokenFactory>(tf), std::index_sequence_for<Params...>());
     }
 
 private:
     template<class TokenFactory, std::size_t ...Is>
-    constexpr auto tokenize(TokenFactory&& tf, std::index_sequence<Is...>) const {
+    constexpr auto tokenize(TokenFactory &&tf, [[maybe_unused]] std::index_sequence<Is...> is) const {
         return contain_cat(std::forward<TokenFactory>(tf).make_token(this->get().template get<Is>())...);
     }
 };
 
-}
+} // namespace noarr
 
 #endif // NOARR_TOKENIZER_HPP
