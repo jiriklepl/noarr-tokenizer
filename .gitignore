@@ -24,6 +24,13 @@ bin/
 *.sln
 *.vcxproj
 *.xcodeproj
+.cache/
 
 # Dependency directories
 vendor/
+
+# Python bs
+
+__pycache__
+*.py[cod]
+*$py.class
