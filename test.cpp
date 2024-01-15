@@ -18,8 +18,8 @@ int main() {
     auto primitive_factory = generic_token_factory(overload {
         []<class T>(scalar<T>) { return token_list<std::string>("scalar") + token_list<std::string>(char_seq_to_str<typename helpers::scalar_name<T>::type>::c_str); },
         []<IsDim auto Dim>(dim_param<Dim>) { return token_list(Dim); },
-        []<IsDim auto Dim, class T>(vector_t<Dim, T>) { return token_list<std::string>("^") + token_list<std::string>("vector") + token_list(Dim); },
-        []<IsDim auto Dim, class T, class LenT>(set_length_t<Dim, T, LenT> sl) { return token_list<std::string>("^") + token_list<std::string>("set_length") + token_list(Dim) + token_list(sl.len()); },
+        []<IsDim auto Dim, class T>(vector_t<Dim, T>) { return token_list<std::string>("vector") + token_list(Dim); },
+        []<IsDim auto Dim, class T, class LenT>(set_length_t<Dim, T, LenT> sl) { return token_list<std::string>("set_length") + token_list(Dim) + token_list(sl.len()); },
         [](auto) { return token_list<>(); }
     });
 
