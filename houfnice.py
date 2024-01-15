@@ -88,24 +88,32 @@ def sequence(*fns):
     return sequence_helper
 
 def structures(dim_databaze):
-
     for line in sys.stdin:
-        yield [token for token in sequence(str.strip, tokenize, parse_structure, fill_lengths, lambda x: canonize_dims(dim_databaze, x))(line)]
+        tokens = sequence(str.strip, tokenize)(line)
+        name = next(tokens, None)
+
+        yield {
+            "name": name,
+            "tokens": [token for token in sequence(parse_structure, fill_lengths, lambda x: canonize_dims(dim_databaze, x))(tokens)]
+        }
 
 def strip_scalars(structures, scalar_type):
     for structure in structures:
-        if len(structure) == 0:
+        tokens = structure["tokens"]
+        if len(tokens) == 0:
             raise Exception("Empty structure")
         
-        if structure[0]["type"] != "scalar":
+        if tokens[0]["type"] != "scalar":
             raise Exception("First token is not scalar")
 
         if scalar_type[0] is None:
-            scalar_type[0] = structure[0]["scalar_type"]
-        elif scalar_type[0] != structure[0]["scalar_type"]:
+            scalar_type[0] = tokens[0]["scalar_type"]
+        elif scalar_type[0] != tokens[0]["scalar_type"]:
             raise Exception("Scalar type mismatch")
-        
-        yield structure[1:]
+
+        structure["tokens"] = tokens[1:]
+
+        yield structure
 
 if __name__ == "__main__":
     dim_databaze = {}
